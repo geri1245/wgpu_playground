@@ -13,6 +13,7 @@ mod camera;
 mod camera_controller;
 mod color;
 mod drawable;
+mod egui_winit_platform;
 mod frame_timer;
 mod gbuffer;
 mod gui;
@@ -46,7 +47,7 @@ pub async fn run() {
     let mut app = app::App::new(&window).await;
 
     event_loop.run(move |event, _, control_flow| {
-        app.handle_event(&window, &event);
+        app.handle_event(&event);
 
         match event {
             Event::WindowEvent { event, window_id } if window_id == window.id() => {
@@ -71,7 +72,7 @@ pub async fn run() {
             Event::DeviceEvent {
                 event, device_id, ..
             } => {
-                app.handle_device_event(&window, device_id, event);
+                app.handle_device_event(device_id, event);
             }
             _ => {}
         }

@@ -16,10 +16,8 @@ anyhow = "1.0"
 glam = "0.21"
 futures-intrusive = "0.4"
 png = "0.17"
-
-imgui = "0.10"
-imgui-winit-support = "0.10"
-imgui-wgpu = "0.22"
+egui = "0.22"
+egui-wgpu = "0.22"
 
 tobj = { version = "3.2", features = ["async"]}
 

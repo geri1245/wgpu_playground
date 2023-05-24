@@ -50,27 +50,16 @@ impl App {
         }
     }
 
-    pub fn handle_event<'a, T>(
-        &mut self,
-        window: &winit::window::Window,
-        event: &winit::event::Event<'a, T>,
-    ) {
-        self.renderer.handle_event(window, event);
+    pub fn handle_event<'a, T>(&mut self, event: &winit::event::Event<'a, T>) {
+        self.renderer.handle_event(event);
     }
 
-    pub fn handle_device_event(
-        &mut self,
-        window: &Window,
-        device_id: winit::event::DeviceId,
-        event: DeviceEvent,
-    ) {
-        self.renderer.handle_event(
-            window,
-            &winit::event::Event::DeviceEvent::<()> {
+    pub fn handle_device_event(&mut self, device_id: winit::event::DeviceId, event: DeviceEvent) {
+        self.renderer
+            .handle_event(&winit::event::Event::DeviceEvent::<()> {
                 device_id,
                 event: event.clone(),
-            },
-        );
+            });
 
         self.camera_controller.process_device_events(event);
     }
@@ -109,12 +98,8 @@ impl App {
     ) -> Result<(), wgpu::SurfaceError> {
         let delta = self.frame_timer.get_delta_and_reset_timer();
         self.update(delta);
-        self.renderer.render(
-            window,
-            &self.camera_controller,
-            &self.light_controller,
-            delta,
-        )
+        self.renderer
+            .render(window, &self.camera_controller, &self.light_controller)
     }
 
     pub fn update(&mut self, delta: Duration) {

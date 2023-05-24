@@ -169,7 +169,7 @@ impl Renderer {
         let output_buffer =
             OutputBuffer::new(&device, config.width as usize, config.height as usize);
 
-        let imgui = Imgui::new(&window, &device, &queue, format);
+        let imgui = Gui::new(&window, &device, format, config.width, config.height);
 
         let texture_extent = wgpu::Extent3d {
             width: config.width,
@@ -378,7 +378,6 @@ impl Renderer {
         window: &winit::window::Window,
         camera_controller: &CameraController,
         light_controller: &LightController,
-        delta: Duration,
     ) -> Result<(), wgpu::SurfaceError> {
         let mut encoder = self
             .device
@@ -491,6 +490,38 @@ impl Renderer {
         //     render_pass.pop_debug_group();
         // }
 
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render pass for drawing egui"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: Some(RenderPassDepthStencilAttachment {
+                    view: &self.gbuffer.textures.depth_texture.view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: false,
+                    }),
+                    stencil_ops: None,
+                }),
+            });
+
+            if self.should_draw_gui {
+                self.gui.render(
+                    &window,
+                    &mut render_pass,
+                    &self.device,
+                    &self.queue,
+                    self.imgui_params.clone(),
+                );
+            }
+        }
+
         encoder.copy_texture_to_buffer(
             output.texture.as_image_copy(),
             wgpu::ImageCopyBuffer {
@@ -507,19 +538,6 @@ impl Renderer {
         );
 
         let submission_index = self.queue.submit(Some(encoder.finish()));
-
-        // Draw imgui
-
-        if self.should_draw_imgui {
-            self.imgui.render(
-                &window,
-                &self.device,
-                &self.queue,
-                delta,
-                &view,
-                self.imgui_params.clone(),
-            );
-        }
 
         output.present();
 
@@ -590,15 +608,11 @@ impl Renderer {
         }
     }
 
-    pub fn handle_event<'a, T>(
-        &mut self,
-        window: &winit::window::Window,
-        event: &winit::event::Event<'a, T>,
-    ) {
-        self.imgui.handle_event(window, event);
+    pub fn handle_event<'a, T>(&mut self, event: &winit::event::Event<'a, T>) {
+        self.gui.handle_event(event);
     }
 
     pub fn toggle_should_draw_imgui(&mut self) {
-        self.should_draw_imgui = !self.should_draw_imgui
+        self.should_draw_gui = !self.should_draw_gui
     }
 }
