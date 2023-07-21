@@ -51,7 +51,7 @@ impl MainPass {
         gbuffer_bind_group: &'a wgpu::BindGroup,
         shadow_bind_group: &'a wgpu::BindGroup,
     ) {
-        render_pass.push_debug_group("Cubes rendering from GBuffer");
+        render_pass.push_debug_group("Main deferred rendering");
 
         render_pass.set_pipeline(&self.render_pipeline);
 

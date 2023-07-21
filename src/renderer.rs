@@ -1,4 +1,3 @@
-use async_std::task::block_on;
 use glam::{Quat, Vec3};
 use std::{cell::RefCell, f32::consts, fs::File, io::Write, rc::Rc, time::Duration};
 use wgpu::{util::DeviceExt, InstanceDescriptor, RenderPassDepthStencilAttachment};
@@ -352,7 +351,7 @@ impl Renderer {
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render pass that uses the GBuffer"),
+                label: Some("Main render pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
@@ -382,6 +381,12 @@ impl Renderer {
                 light_controller,
                 &self.gbuffer.bind_group,
                 &self.shadow.bind_group,
+            );
+
+            self.forward_render_pipeline.render(
+                &mut render_pass,
+                camera_controller,
+                light_controller,
             );
 
             self.skybox.render(&mut render_pass, camera_controller);
@@ -456,7 +461,7 @@ impl Renderer {
         if self.should_capture_frame_content {
             self.should_capture_frame_content = false;
             let future = self.create_png("./frame.png", submission_index);
-            block_on(future);
+            async_std::task::block_on(future);
         }
 
         Ok(())

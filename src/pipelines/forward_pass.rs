@@ -1,4 +1,7 @@
-use crate::{bind_group_layout_descriptors, buffer_content::BufferContent, texture, vertex};
+use crate::{
+    bind_group_layout_descriptors, buffer_content::BufferContent,
+    camera_controller::CameraController, light_controller::LightController, texture, vertex,
+};
 
 pub struct ForwardPass {
     render_pipeline: wgpu::RenderPipeline,
@@ -31,5 +34,21 @@ impl ForwardPass {
         );
 
         Self { render_pipeline }
+    }
+
+    pub fn render<'a>(
+        &'a self,
+        render_pass: &mut wgpu::RenderPass<'a>,
+        camera_controller: &'a CameraController,
+        light_controller: &'a LightController,
+    ) {
+        render_pass.push_debug_group("Forward rendering");
+
+        render_pass.set_pipeline(&self.render_pipeline);
+
+        render_pass.set_bind_group(0, &light_controller.bind_group, &[]);
+        render_pass.set_bind_group(1, &camera_controller.bind_group, &[]);
+
+        render_pass.pop_debug_group();
     }
 }

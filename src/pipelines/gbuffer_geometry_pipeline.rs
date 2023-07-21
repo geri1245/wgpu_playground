@@ -172,7 +172,7 @@ impl GBuffer {
         instance_buffer: &Buffer,
     ) {
         let mut gbuffer_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Geometry pass"),
+            label: Some("Geometry pass of the GBuffer"),
             color_attachments: &[
                 Some(RenderPassColorAttachment {
                     view: &self.textures.position.view,

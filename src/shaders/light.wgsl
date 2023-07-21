@@ -1,8 +1,13 @@
-struct Camera {
+struct CameraUniform {
     view_proj: mat4x4<f32>,
-}
+    view: mat4x4<f32>,
+    view_inv: mat4x4<f32>,
+    proj: mat4x4<f32>,
+    proj_inv: mat4x4<f32>,
+    position: vec3<f32>,
+};
 @group(1) @binding(0)
-var<uniform> camera: Camera;
+var<uniform> camera: CameraUniform;
 
 struct Light {
     view_proj: mat4x4<f32>,
