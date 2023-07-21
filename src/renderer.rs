@@ -5,21 +5,17 @@ use wgpu::{util::DeviceExt, InstanceDescriptor, RenderPassDepthStencilAttachment
 
 use crate::{
     bind_group_layout_descriptors,
-    buffer_content::BufferContent,
     camera_controller::CameraController,
     color,
-    gbuffer::GBuffer,
     gui::{Gui, GuiParams},
     instance::{self, Instance},
     light_controller::LightController,
     model::{Material, Mesh, Model},
-    primitive_shapes,
-    render_pipeline::RenderPipeline,
-    resources,
-    shadow_pipeline::Shadow,
-    skybox_pipeline,
+    pipelines::Shadow,
+    pipelines::{self, GBuffer},
+    pipelines::{ForwardPass, Skybox},
+    primitive_shapes, resources,
     texture::{self, Texture},
-    vertex,
 };
 
 pub const MAX_LIGHTS: usize = 10;
@@ -91,12 +87,12 @@ pub struct Renderer {
 
     surface: wgpu::Surface,
 
-    render_pipeline: RenderPipeline,
-    light_render_pipeline: RenderPipeline,
+    main_pipeline: pipelines::MainPass,
+    forward_render_pipeline: ForwardPass,
     obj_model: Model,
     depth_texture: texture::Texture,
 
-    skybox: skybox_pipeline::Skybox,
+    skybox: Skybox,
 
     instances: Vec<Instance>,
     instance_buffer: wgpu::Buffer,
@@ -192,61 +188,9 @@ impl Renderer {
             "depth_texture",
         );
 
-        let shader_desc = wgpu::ShaderModuleDescriptor {
-            label: Some("GBuffer processing shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/gbuffer_pass.wgsl").into()),
-        };
-
-        let shadow = crate::shadow_pipeline::Shadow::new(&device);
-
-        let main_shader = device.create_shader_module(shader_desc);
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Main Render Pipeline Layout"),
-                bind_group_layouts: &[
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::LIGHT),
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::CAMERA),
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::GBUFFER),
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::DEPTH_TEXTURE),
-                ],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = RenderPipeline::new(
-            Some("Main render pipeline"),
-            &device,
-            &render_pipeline_layout,
-            config.format,
-            Some(texture::Texture::DEPTH_FORMAT),
-            &[],
-            &main_shader,
-        );
-
-        let light_render_pipeline = {
-            let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Light Pipeline Layout"),
-                bind_group_layouts: &[
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::LIGHT),
-                    &device.create_bind_group_layout(&bind_group_layout_descriptors::CAMERA),
-                ],
-                push_constant_ranges: &[],
-            });
-            let light_shader_desc = wgpu::ShaderModuleDescriptor {
-                label: Some("Light Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/light.wgsl").into()),
-            };
-            let light_shader = device.create_shader_module(light_shader_desc);
-            RenderPipeline::new(
-                Some("Light render pipeline"),
-                &device,
-                &layout,
-                config.format,
-                Some(texture::Texture::DEPTH_FORMAT),
-                &[vertex::VertexRaw::buffer_layout()],
-                &light_shader,
-            )
-        };
+        let shadow = crate::pipelines::Shadow::new(&device);
+        let main_pipeline = pipelines::MainPass::new(&device, config.format);
+        let forward_render_pipeline = ForwardPass::new(&device, config.format);
 
         const SPACE_BETWEEN: f32 = 4.0;
         const SCALE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
@@ -326,7 +270,7 @@ impl Renderer {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let skybox = skybox_pipeline::Skybox::new(&device, &queue, config.format);
+        let skybox = pipelines::Skybox::new(&device, &queue, config.format);
 
         let gbuffer = GBuffer::new(&device, config.width, config.height);
 
@@ -336,8 +280,8 @@ impl Renderer {
             queue,
             config,
             size,
-            render_pipeline,
-            light_render_pipeline,
+            main_pipeline,
+            forward_render_pipeline,
             obj_model,
             depth_texture,
             instances,
@@ -432,28 +376,15 @@ impl Renderer {
             // render_pass.set_vertex_buffer(1, self.square_instance_buffer.slice(..));
             // self.square.draw_instanced(&mut render_pass, 0..1);
 
-            {
-                render_pass.push_debug_group("Cubes rendering from GBuffer");
+            self.main_pipeline.render(
+                &mut render_pass,
+                camera_controller,
+                light_controller,
+                &self.gbuffer.bind_group,
+                &self.shadow.bind_group,
+            );
 
-                render_pass.set_pipeline(&self.render_pipeline.pipeline);
-
-                render_pass.set_bind_group(1, &camera_controller.bind_group, &[]);
-                render_pass.set_bind_group(0, &light_controller.bind_group, &[]);
-                render_pass.set_bind_group(2, &self.gbuffer.bind_group, &[]);
-                render_pass.set_bind_group(3, &self.shadow.bind_group, &[]);
-
-                render_pass.draw(0..3, 0..1);
-
-                render_pass.pop_debug_group();
-            }
-
-            {
-                render_pass.push_debug_group("Skybox rendering");
-
-                self.skybox.render(&mut render_pass, camera_controller);
-
-                render_pass.pop_debug_group();
-            }
+            self.skybox.render(&mut render_pass, camera_controller);
         }
 
         // {

@@ -49,13 +49,13 @@ impl GBuffer {
 
         let gbuffer_shader_desc = wgpu::ShaderModuleDescriptor {
             label: Some("Geometry pass shader desc"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/geometry_pass.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/geometry_pass.wgsl").into()),
         };
 
         let gbuffer_shader = device.create_shader_module(gbuffer_shader_desc);
 
         let gbuffer_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("gbuffer pipeline"),
+            label: Some("geometry pipeline"),
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &gbuffer_shader,
@@ -172,7 +172,7 @@ impl GBuffer {
         instance_buffer: &Buffer,
     ) {
         let mut gbuffer_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("GBuffer pass"),
+            label: Some("Geometry pass"),
             color_attachments: &[
                 Some(RenderPassColorAttachment {
                     view: &self.textures.position.view,

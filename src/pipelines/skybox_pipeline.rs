@@ -41,7 +41,7 @@ impl Skybox {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Skybox shader"),
-            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shaders/skybox.wgsl"))),
+            source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shaders/skybox.wgsl"))),
         });
 
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -90,9 +90,13 @@ impl Skybox {
         render_pass: &mut wgpu::RenderPass<'a>,
         camera_controller: &'a CameraController,
     ) {
+        render_pass.push_debug_group("Skybox rendering");
+
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(1, &camera_controller.bind_group, &[]);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
         render_pass.draw(0..3, 0..1);
+
+        render_pass.pop_debug_group();
     }
 }

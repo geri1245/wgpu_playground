@@ -54,7 +54,7 @@ impl Shadow {
             let shadow_shader_desc = wgpu::ShaderModuleDescriptor {
                 label: Some("Shadow bake shader"),
                 source: wgpu::ShaderSource::Wgsl(
-                    include_str!("shaders/shadow_bake_vert.wgsl").into(),
+                    include_str!("../shaders/shadow_bake_vert.wgsl").into(),
                 ),
             };
 
